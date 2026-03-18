@@ -121,7 +121,7 @@ lab-01/
 ### Участники
 
 - Читатель
-- Web Client
+- Web Clientgit branch -M main
 - API Server
 - Database
 - Event Bus
