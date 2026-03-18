@@ -1,33 +1,38 @@
-using System;
+using Domain.Events;
+using Domain.Models.ValueObjects;
 
-namespace BookTracker.Domain.Models
+namespace Domain.Models;
+
+public class Book
 {
-    public class Book
+    public Guid Id { get; private set; }
+    public string Title { get; private set; }
+    public ReadingProgress Progress { get; private set; }
+    public string Status { get; private set; }
+
+    // Список событий, которые произошли с книгой
+    private readonly List<IDomainEvent> _domainEvents = new();
+    public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
+
+    public Book(string title, int totalPages)
     {
-        public Guid Id { get; private set; }
-        public string Title { get; private set; }
-        public string Author { get; private set; }
-        public string Status { get; private set; } // "Reading" (Читаю), "Completed" (Прочитано)
-        public int? Rating { get; private set; }
+        Id = Guid.NewGuid();
+        Title = title;
+        Progress = new ReadingProgress(0, totalPages);
+        Status = "New";
+    }
 
-        public Book(Guid id, string title, string author)
+    public void UpdateProgress(int page)
+    {
+        this.Progress = new ReadingProgress(page, this.Progress.TotalPages);
+
+        if (this.Progress.IsFinished && Status != "Completed")
         {
-            Id = id;
-            Title = title;
-            Author = author;
-            Status = "Reading";
-        }
-
-        // Бизнес-логика: завершение чтения с выставлением оценки
-        public void CompleteReading(int rating)
-        {
-            if (rating < 1 || rating > 5)
-            {
-                throw new ArgumentException("Рейтинг должен быть от 1 до 5 звёзд.");
-            }
-
-            this.Rating = rating;
             this.Status = "Completed";
+            // Регистрируем событие!
+            _domainEvents.Add(new BookCompletedEvent(this.Id, DateTime.UtcNow));
         }
     }
+
+    public void ClearEvents() => _domainEvents.Clear();
 }
